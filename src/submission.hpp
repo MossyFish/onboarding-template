@@ -58,7 +58,7 @@ void apply_stencil(const Grid& old_grid, Grid& new_grid) {
   const int rows_i = static_cast<int>(rows);
   const int cols_i = static_cast<int>(cols);
 
-  #pragma omp parallel for
+  #pragma omp parallel for schedule(static, 32)
   for (int i = 1; i < rows_i - 1; ++i) {
     const int row_offset = i * cols_i;
 
