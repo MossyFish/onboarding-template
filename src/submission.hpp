@@ -57,8 +57,8 @@ void apply_stencil(const Grid& old_grid, Grid& new_grid) {
     new_grid(rows - 1, j) = old_grid(rows - 1, j);
   }
 
-  const double* old_data = old_grid.data();
-  double* new_data = new_grid.data();
+  const double* __restrict old_data = old_grid.data();
+  double* __restrict new_data = new_grid.data();
 
   #pragma omp parallel for
   for (std::size_t i = 1; i < rows - 1; ++i) {
