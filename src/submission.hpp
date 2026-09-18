@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstring>
 #include <vector>
 
 // Starter Grid for the 2D heat-diffusion problem.
@@ -50,26 +51,20 @@ void apply_stencil(const Grid& old_grid, Grid& new_grid) {
   const int rows_i = static_cast<int>(old_grid.rows());
   const int cols_i = static_cast<int>(old_grid.cols());
 
-  #pragma omp parallel
-  {
-    #pragma omp for
-    for (int j = 0; j < cols_i; ++j) {
-      new_data[j] = old_data[j];
-      new_data[(rows_i - 1) * cols_i + j] = old_data[(rows_i - 1) * cols_i + j];
-    }
+  std::memcpy(new_data, old_data, cols_i * sizeof(double));
+  std::memcpy(new_data + (rows_i - 1) * cols_i, old_data + (rows_i - 1) * cols_i, cols_i * sizeof(double));
 
-    #pragma omp for
-    for (int i = 1; i < rows_i - 1; ++i) {
-      const int row_offset = i * cols_i;
+  #pragma omp parallel for
+  for (int i = 1; i < rows_i - 1; ++i) {
+    const int row_offset = i * cols_i;
 
-      new_data[row_offset] = old_data[row_offset];
-      new_data[row_offset + cols_i - 1] = old_data[row_offset + cols_i - 1];
+    new_data[row_offset] = old_data[row_offset];
+    new_data[row_offset + cols_i - 1] = old_data[row_offset + cols_i - 1];
 
-      #pragma omp simd
-      for (int j = 1; j < cols_i - 1; ++j) {
-        const int index = row_offset + j;
-        new_data[index] = 0.5 * old_data[index] + 0.125 * (old_data[index - cols_i] + old_data[index + cols_i] + old_data[index - 1] + old_data[index + 1]);
-      }
+    #pragma omp simd
+    for (int j = 1; j < cols_i - 1; ++j) {
+      const int index = row_offset + j;
+      new_data[index] = 0.5 * old_data[index] + 0.125 * (old_data[index - cols_i] + old_data[index + cols_i] + old_data[index - 1] + old_data[index + 1]);
     }
   }
 }
