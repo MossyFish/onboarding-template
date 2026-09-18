@@ -44,31 +44,32 @@ double Grid::operator()(std::size_t i, std::size_t j) const {
 // Apply the five-point stencil over all interior points, copying the boundary
 // values unchanged from old_grid to new_grid. Implement your solution here.
 void apply_stencil(const Grid& old_grid, Grid& new_grid) {
-  const std::size_t rows = old_grid.rows();
-  const std::size_t cols = old_grid.cols();
-
-  for (std::size_t j = 0; j < cols; ++j) {
-    new_grid(0, j) = old_grid(0, j);
-    new_grid(rows - 1, j) = old_grid(rows - 1, j);
-  }
-
   const double* __restrict old_data = old_grid.data();
   double* __restrict new_data = new_grid.data();
 
-  const int rows_i = static_cast<int>(rows);
-  const int cols_i = static_cast<int>(cols);
+  const int rows_i = static_cast<int>(old_grid.rows());
+  const int cols_i = static_cast<int>(old_grid.cols());
 
-  #pragma omp parallel for schedule(static, 32)
-  for (int i = 1; i < rows_i - 1; ++i) {
-    const int row_offset = i * cols_i;
+  #pragma omp parallel
+  {
+    #pragma omp for
+    for (int j = 0; j < cols_i; ++j) {
+      new_data[j] = old_data[j];
+      new_data[(rows_i - 1) * cols_i + j] = old_data[(rows_i - 1) * cols_i + j];
+    }
 
-    new_data[row_offset] = old_data[row_offset];
-    new_data[row_offset + cols_i - 1] = old_data[row_offset + cols_i - 1];
+    #pragma omp for
+    for (int i = 1; i < rows_i - 1; ++i) {
+      const int row_offset = i * cols_i;
 
-    #pragma omp simd
-    for (int j = 1; j < cols_i - 1; ++j) {
-      const int index = row_offset + j;
-      new_data[index] = 0.5 * old_data[index] + 0.125 * (old_data[index - cols_i] + old_data[index + cols_i] + old_data[index - 1] + old_data[index + 1]);
+      new_data[row_offset] = old_data[row_offset];
+      new_data[row_offset + cols_i - 1] = old_data[row_offset + cols_i - 1];
+
+      #pragma omp simd
+      for (int j = 1; j < cols_i - 1; ++j) {
+        const int index = row_offset + j;
+        new_data[index] = 0.5 * old_data[index] + 0.125 * (old_data[index - cols_i] + old_data[index + cols_i] + old_data[index - 1] + old_data[index + 1]);
+      }
     }
   }
 }
