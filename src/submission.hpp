@@ -47,11 +47,6 @@ void apply_stencil(const Grid& old_grid, Grid& new_grid) {
   const std::size_t rows = old_grid.rows();
   const std::size_t cols = old_grid.cols();
 
-  for (std::size_t i = 0; i < rows; ++i) {
-    new_grid(i, 0) = old_grid(i, 0);
-    new_grid(i, cols - 1) = old_grid(i, cols - 1);
-  }
-
   for (std::size_t j = 0; j < cols; ++j) {
     new_grid(0, j) = old_grid(0, j);
     new_grid(rows - 1, j) = old_grid(rows - 1, j);
@@ -60,12 +55,20 @@ void apply_stencil(const Grid& old_grid, Grid& new_grid) {
   const double* __restrict old_data = old_grid.data();
   double* __restrict new_data = new_grid.data();
 
+  const int rows_i = static_cast<int>(rows);
+  const int cols_i = static_cast<int>(cols);
+
   #pragma omp parallel for
-  for (std::size_t i = 1; i < rows - 1; ++i) {
-    const std::size_t row_offset = i * cols;
-    for (std::size_t j = 1; j < cols - 1; ++j) {
-      const std::size_t index = row_offset + j;
-      new_data[index] = 0.5 * old_data[index] + 0.125 * (old_data[index - cols] + old_data[index + cols] + old_data[index - 1] + old_data[index + 1]);
+  for (int i = 1; i < rows_i - 1; ++i) {
+    const int row_offset = i * cols_i;
+
+    new_data[row_offset] = old_data[row_offset];
+    new_data[row_offset + cols_i - 1] = old_data[row_offset + cols_i - 1];
+
+    #pragma omp simd
+    for (int j = 1; j < cols_i - 1; ++j) {
+      const int index = row_offset + j;
+      new_data[index] = 0.5 * old_data[index] + 0.125 * (old_data[index - cols_i] + old_data[index + cols_i] + old_data[index - 1] + old_data[index + 1]);
     }
   }
 }
